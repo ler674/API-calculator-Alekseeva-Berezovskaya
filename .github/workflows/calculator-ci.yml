@@ -1,14 +1,13 @@
-"""
-CI-пайплайн для API-калькулятора.
+# CI-пайплайн для API-калькулятора.
 
-Используемые инструменты безопасности:
-- Semgrep: статический анализ кода
-- pip-audit: поиск уязвимостей в Python-зависимостях
-- Gitleaks: поиск утечек секретов и паролей
-- Hadolint: линтер для Dockerfile
-- Checkov: сканер конфигураций
-- Trivy: сканирование готового Docker-образа
-"""
+# Используемые инструменты безопасности:
+# - Semgrep: статический анализ кода
+# - pip-audit: поиск уязвимостей в Python-зависимостях
+# - Gitleaks: поиск утечек секретов и паролей
+# - Hadolint: линтер для Dockerfile
+# - Checkov: сканер конфигураций
+# - Trivy: сканирование готового Docker-образа
+
 name: CI calculator Alekseeva Berezovskaya
 
 on:
@@ -47,10 +46,8 @@ jobs:
       - name: Run pytest
         run: python -m pytest tests/ -v
 
-  """
-  Статический анализ кода 
-  Поиск наличия уязвимостей в коде Python
-  """
+  # Статический анализ кода
+  # Поиск наличия уязвимостей в коде Python
   sast-semgrep:
     name: SAST - Semgrep
     runs-on: ubuntu-latest
@@ -72,10 +69,8 @@ jobs:
         env:
           SEMGREP_ARGS: "--error"
 
-  """
-  Анализ зависимостей SCA (Software Composition Analysis)
-  Проверка библиотеки из requirements.txt на известные уязвимости
-  """
+  # Анализ зависимостей SCA (Software Composition Analysis)
+  # Проверка библиотеки из requirements.txt на известные уязвимости
   sca-pip-audit:
     name: SCA - pip-audit
     runs-on: ubuntu-latest
@@ -97,10 +92,8 @@ jobs:
           pip install pip-audit
           pip-audit -r requirements.txt --strict --desc on
 
-  """
-  Поиск секретов
-  Проверка наличия в коде паролей, API-ключей или токенов
-  """
+  # Поиск секретов
+  # Проверка наличия в коде паролей, API-ключей или токенов
   secrets-gitleaks:
     name: Secrets - Gitleaks
     runs-on: ubuntu-latest
@@ -120,10 +113,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  """
-  Анализ Dockerfile
-  Проверка Dockerfile на ошибки
-  """
+  # Анализ Dockerfile
+  # Проверка Dockerfile на ошибки
   dockerfile-hadolint:
     name: Dockerfile - Hadolint
     runs-on: ubuntu-latest
@@ -140,10 +131,8 @@ jobs:
           dockerfile: Dockerfile
           failure-threshold: error
 
-  """
-  Статический анализ инфраструктуры как кода IaC (Infrastructure as Code)
-  Проверка конфигурации на соответствие стандартам безопасности
-  """
+  # Статический анализ инфраструктуры как кода IaC (Infrastructure as Code)
+  # Проверка конфигурации на соответствие стандартам безопасности
   iac-checkov:
     name: IaC - Checkov
     runs-on: ubuntu-latest
@@ -173,10 +162,8 @@ jobs:
         with:
           sarif_file: checkov.sarif
 
-  """
-  Сканирование образа Trivy
-  Начинается только если все проверки прошли успешно
-  """
+  # Сканирование образа Trivy
+  # Начинается только если все проверки прошли успешно
   scan:
     name: Scan Image - Trivy
     # Ожидание успешного завершения всех проверок кода
@@ -222,7 +209,7 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
- build-and-push:
+  build-and-push:
     # Запускается только после успешного сканирования
     needs: [scan]
     runs-on: ubuntu-latest
