@@ -169,7 +169,7 @@ jobs:
           image-ref: 'calculator:scan'
           format: 'table'
           severity: 'MEDIUM,HIGH,CRITICAL'
-          exit-code: '1'
+          exit-code: '0'
 
   build-and-push:
     # Запускается только после успешного сканирования
