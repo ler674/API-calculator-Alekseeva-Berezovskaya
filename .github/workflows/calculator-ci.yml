@@ -1,12 +1,20 @@
+"""
+CI-пайплайн для API-калькулятора.
 
-# CI-пайплайн для API-калькулятора.
-
-name: CI - build, test and publish calculator image
+Используемые инструменты безопасности:
+- Semgrep: статический анализ кода
+- pip-audit: поиск уязвимостей в Python-зависимостях
+- Gitleaks: поиск утечек секретов и паролей
+- Hadolint: линтер для Dockerfile
+- Checkov: сканер конфигураций
+- Trivy: сканирование готового Docker-образа
+"""
+name: CI calculator Alekseeva Berezovskaya
 
 on:
   push:
     branches: [ "main" ]
-    tags: [ 'v*.*.*' ]          # запуск при пуше тега, например v1.0.0
+    tags: [ 'v*.*.*' ]        # запуск при пуше тега, например v1.0.0
   pull_request:
     branches: [ "main" ]
 
@@ -16,11 +24,61 @@ env:
   IMAGE_NAME: ${{ github.repository }}    # полное имя репозитория: владелец/имя
 
 jobs:
-  build-and-push:
+  test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    steps:
+      # Получение кода
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Установка Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' # Используем ту же версию, что и в Dockerfile
+
+      # Установка зависимостей
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Запуск тестов
+      - name: Run pytest
+        run: python -m pytest tests/ -v
+
+  """
+  Статический анализ кода 
+  Поиск наличия уязвимостей в коде Python
+  """
+  sast-semgrep:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+
+    steps:
+      # Получение кода
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Запуск анализа
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          # Официальные правила для Python и безопасности
+          config: >-
+            p/python
+            p/security-audit
+            p/owasp-top-ten
+        env:
+          SEMGREP_ARGS: "--error"
+
+  """
+  Анализ зависимостей SCA (Software Composition Analysis)
+  Проверка библиотеки из requirements.txt на известные уязвимости
+  """
+  sca-pip-audit:
+    name: SCA - pip-audit
+    runs-on: ubuntu-latest
 
     steps:
       # Получение кода
@@ -33,16 +91,148 @@ jobs:
         with:
           python-version: '3.12'
 
-      # Установка зависимостей
-      - name: Install dependencies
+      # Сканирование зависимостей
+      - name: Run pip-audit
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install pip-audit
+          pip-audit -r requirements.txt --strict --desc on
 
-      # Запуск тестов
-      - name: Run tests
-        run: |
-          python -m pytest tests/ -v
+  """
+  Поиск секретов
+  Проверка наличия в коде паролей, API-ключей или токенов
+  """
+  secrets-gitleaks:
+    name: Secrets - Gitleaks
+    runs-on: ubuntu-latest
+
+    steps:
+      # Получение кода
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 скачивает всю историю коммитов.
+          # Без этого Gitleaks проверит только последний коммит.
+          fetch-depth: 0
+
+      # Поиск секретов
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  """
+  Анализ Dockerfile
+  Проверка Dockerfile на ошибки
+  """
+  dockerfile-hadolint:
+    name: Dockerfile - Hadolint
+    runs-on: ubuntu-latest
+
+    steps:
+      # Получение кода
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      #Проверка Dockerfile
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: error
+
+  """
+  Статический анализ инфраструктуры как кода IaC (Infrastructure as Code)
+  Проверка конфигурации на соответствие стандартам безопасности
+  """
+  iac-checkov:
+    name: IaC - Checkov
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+       # Получение кода
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Сканирование конфигурации
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: ./
+          framework: dockerfile,github_actions # Что именно проверяется
+          output_format: sarif                 # Формат отчета для GitHub
+          output_file_path: checkov.sarif
+          quiet: true
+
+      # Загрузка отчета Checkov во вкладку Security на GitHub
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov.sarif
+
+  """
+  Сканирование образа Trivy
+  Начинается только если все проверки прошли успешно
+  """
+  scan:
+    name: Scan Image - Trivy
+    # Ожидание успешного завершения всех проверок кода
+    needs: [test, sast-semgrep, sca-pip-audit, secrets-gitleaks, dockerfile-hadolint, iac-checkov]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      # Получение кода
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Настройка Docker Buildx для сборки образов
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Локальная сборка образа, чтобы Trivy мог его просканировать
+      - name: Build image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Запуск Trivy на поиск критических уязвимостей
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      # Загрузка отчета Trivy в GitHub Security
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+ build-and-push:
+    # Запускается только после успешного сканирования
+    needs: [scan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # Разрешение на запись в GitHub Packages
+    steps:
+      # Получение кода
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       # Настройка Docker Buildx для сборки образов
       - name: Set up Docker Buildx
@@ -58,7 +248,7 @@ jobs:
 
       # Автоматическое формирование тегов образа
       # При пуше в main: теги main и sha-
-      # При пуше тега v1.0.0: теги 1.0.0, 1.0 и latest.
+      # При пуше тега v1.0.0: теги 1.0.0, 1.0 и latest
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
