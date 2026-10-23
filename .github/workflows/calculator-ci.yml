@@ -185,7 +185,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # Разрешение на запись в GitHub Packages
+      packages: write
+
     steps:
       # Получение кода
       - name: Checkout repository
