@@ -164,12 +164,12 @@ jobs:
 
       # Запуск Trivy на поиск критических уязвимостей
       - name: Run Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan'
           format: 'sarif'
           output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
+          severity: 'MEDIUM,HIGH,CRITICAL'
           exit-code: '1'
 
       # Загрузка отчета Trivy в GitHub Security
