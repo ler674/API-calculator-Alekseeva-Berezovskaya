@@ -167,17 +167,9 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:scan'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          format: 'table'
           severity: 'MEDIUM,HIGH,CRITICAL'
           exit-code: '1'
-
-      # Загрузка отчета Trivy в GitHub Security
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
 
   build-and-push:
     # Запускается только после успешного сканирования
