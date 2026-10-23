@@ -72,7 +72,7 @@ jobs:
 
   # Bandit - только для Python
   sast-bandit:
-    name: "SAST: Bandit"
+    name: SAST - Bandit
     runs-on: ubuntu-latest
     steps:
       # Получение кода
@@ -137,7 +137,7 @@ jobs:
   scan:
     name: Scan Image - Trivy
     # Ожидание успешного завершения всех проверок кода
-    needs: [test, sast-semgrep, sca-pip-audit, secrets-gitleaks, dockerfile-hadolint, iac-checkov]
+    needs: [test, sast-semgrep, sast-bandit, secrets-gitleaks, dockerfile-hadolint]
     runs-on: ubuntu-latest
     permissions:
       contents: read
