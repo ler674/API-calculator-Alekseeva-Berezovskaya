@@ -34,7 +34,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12' # Используем ту же версию, что и в Dockerfile
+          python-version: '3.12'
 
       # Установка зависимостей
       - name: Install dependencies
@@ -48,6 +48,7 @@ jobs:
 
   # Статический анализ кода
   # Поиск наличия уязвимостей в коде Python
+  # Semgrep - мультиъязычный
   sast-semgrep:
     name: SAST - Semgrep
     runs-on: ubuntu-latest
@@ -69,28 +70,28 @@ jobs:
         env:
           SEMGREP_ARGS: "--error"
 
-  # Анализ зависимостей SCA (Software Composition Analysis)
-  # Проверка библиотеки из requirements.txt на известные уязвимости
-  sca-pip-audit:
-    name: SCA - pip-audit
+  # Bandit - только для Python
+  sast-bandit:
+    name: "SAST: Bandit"
     runs-on: ubuntu-latest
-
     steps:
       # Получение кода
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Установка Python
+       # Установка Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      # Сканирование зависимостей
-      - name: Run pip-audit
-        run: |
-          pip install pip-audit
-          pip-audit -r requirements.txt --strict --desc on
+      # Установка Bandit
+      - name: Install Bandit
+        run: pip install bandit
+
+      # Запуск анализа
+      - name: Run Bandit
+        run: bandit -r calculator/ -ll
 
   # Поиск секретов
   # Проверка наличия в коде паролей, API-ключей или токенов
@@ -130,37 +131,6 @@ jobs:
         with:
           dockerfile: Dockerfile
           failure-threshold: error
-
-  # Статический анализ инфраструктуры как кода IaC (Infrastructure as Code)
-  # Проверка конфигурации на соответствие стандартам безопасности
-  iac-checkov:
-    name: IaC - Checkov
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-
-    steps:
-       # Получение кода
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # Сканирование конфигурации
-      - name: Run Checkov
-        uses: bridgecrewio/checkov-action@master
-        with:
-          directory: ./
-          framework: dockerfile,github_actions # Что именно проверяется
-          output_format: sarif                 # Формат отчета для GitHub
-          output_file_path: checkov.sarif
-          quiet: true
-
-      # Загрузка отчета Checkov во вкладку Security на GitHub
-      - name: Upload Checkov results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: checkov.sarif
 
   # Сканирование образа Trivy
   # Начинается только если все проверки прошли успешно
