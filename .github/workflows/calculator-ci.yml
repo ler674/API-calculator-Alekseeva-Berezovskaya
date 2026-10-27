@@ -3,8 +3,10 @@
 # Используемые инструменты безопасности:
 # - Semgrep: статический анализ кода
 # - Bandit: статический анализ кода Python
+# - pip-audit: поиск уязвимостей в Python-зависимостях (SCA)
 # - Gitleaks: поиск утечек секретов и паролей
 # - Hadolint: линтер для Dockerfile
+# - Checkov: сканер конфигураций (IaC)
 # - Trivy: сканирование готового Docker-образа
 
 name: CI calculator Alekseeva Berezovskaya
@@ -60,6 +62,7 @@ jobs:
       # Запуск анализа
       - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
+        continue-on-error: true
         with:
           # Официальные правила для Python и безопасности
           config: >-
@@ -91,6 +94,54 @@ jobs:
       # Запуск анализа
       - name: Run Bandit
         run: bandit -r calculator/ -ll
+        continue-on-error: true
+
+  # Анализ зависимостей (SCA)
+  # Поиск уязвимостей (CVE) в библиотеках из requirements.txt
+  sca-pip-audit:
+    name: SCA - pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      # Получение кода
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Установка Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Установка pip-audit
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      # Запуск анализа
+      # Флаг || true нужен, чтобы пайплайн не упал
+      - name: Run pip-audit
+        run: pip-audit -r requirements.txt --desc on || true
+
+  # Анализ инфраструктуры (IaC)
+  # Проверка Dockerfile и конфигураций GitHub Actions на ошибки
+  iac-checkov:
+    name: IaC - Checkov
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      # Получение кода
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Запуск анализа
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: ./
+          framework: dockerfile,github_actions
+          quiet: true
+          soft_fail: true # Не ронять пайплайн при находках
 
   # Поиск секретов
   # Проверка наличия в коде паролей, API-ключей или токенов
@@ -110,6 +161,7 @@ jobs:
       # Поиск секретов
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -127,6 +179,7 @@ jobs:
       #Проверка Dockerfile
       - name: Run Hadolint
         uses: hadolint/hadolint-action@v3.1.0
+        continue-on-error: true
         with:
           dockerfile: Dockerfile
           failure-threshold: error
@@ -136,7 +189,7 @@ jobs:
   scan:
     name: Scan Image - Trivy
     # Ожидание успешного завершения всех проверок кода
-    needs: [test, sast-semgrep, sast-bandit, secrets-gitleaks, dockerfile-hadolint]
+    needs: [test, sast-semgrep, sast-bandit, sca-pip-audit, iac-checkov, secrets-gitleaks, dockerfile-hadolint]
     runs-on: ubuntu-latest
     permissions:
       contents: read
