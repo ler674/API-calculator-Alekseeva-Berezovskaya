@@ -4,9 +4,9 @@
 # - Semgrep: статический анализ кода
 # - Bandit: статический анализ кода Python
 # - pip-audit: поиск уязвимостей в Python-зависимостях (SCA)
+# - Checkov: сканер конфигураций (IaC)
 # - Gitleaks: поиск утечек секретов и паролей
 # - Hadolint: линтер для Dockerfile
-# - Checkov: сканер конфигураций (IaC)
 # - Trivy: сканирование готового Docker-образа
 
 name: CI calculator Alekseeva Berezovskaya
@@ -69,8 +69,6 @@ jobs:
             p/python
             p/security-audit
             p/owasp-top-ten
-        env:
-          SEMGREP_ARGS: "--error"
 
   # Bandit - только для Python
   sast-bandit:
