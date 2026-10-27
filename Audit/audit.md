@@ -22,11 +22,16 @@
 
 Сбой произошел не в коде калькулятора, а в конфигурации Semgrep. Оказалось, что используемая версия GitHub Action (`semgrep/semgrep-action@v1`) устарела и не может корректно обработать уровни критичности правил. Из-за этого анализ кода Semgrep фактически не был произведен.
 
+<img width="568" height="178" alt="Semgrep 4" src="https://github.com/user-attachments/assets/71baf064-aeb7-439f-98cd-725fc4e04ce0" />
+<img width="363" height="25" alt="Semgrep 5" src="https://github.com/user-attachments/assets/fd7e472f-8286-4b38-a907-bda69be6e43f" />
+
 ### Bandit
 
 Результат работы: `Test results: No issues identified.`.
 
 Код API-калькулятора написан безопасно и не содержит потенциально опасных конструкций и уязвимостей.
+
+<img width="340" height="205" alt="Bandit 3" src="https://github.com/user-attachments/assets/bd467d84-470d-4764-b213-ca310fb85f98" />
 
 ### pip-audit
 
@@ -35,7 +40,10 @@
 В частности:
 
 - `pytest 8.3.4` - Обнаружена уязвимость `PYSEC-2026-1845`, связанная с использованием небезопасных временных директорий, что позволяет локальным пользователям вызвать отказ в обслуживании или повысить привилегии.
-- `starlette 0.41.3` - Множественные уязвимости (`PYSEC-2026-1941`, `PYSEC-2026-1942`, `PYSEC-2026-161` и другие), включая связанные с DoS через HTTP-заголовок `Range`, обход авторизации через подмену заголовка `Host` и другие. 
+- `starlette 0.41.3` - Множественные уязвимости (`PYSEC-2026-1941`, `PYSEC-2026-1942`, `PYSEC-2026-161` и другие), включая связанные с DoS через HTTP-заголовок `Range`, обход авторизации через подмену заголовка `Host` и другие.
+
+<img width="391" height="38" alt="pip-audit 2" src="https://github.com/user-attachments/assets/0d2f5b10-62ff-4ad3-92ad-fc092d24b0cc" />
+<img width="1148" height="320" alt="pip-audit 3" src="https://github.com/user-attachments/assets/016f266f-099b-4d23-b5d9-343791bbe97c" />
 
 ### Checkov
 
@@ -43,15 +51,21 @@
 
 Ошибка в пайплайне: `CKV2_GHA_1: "Ensure top-level permissions are not set to write-all"`. То есть выданы избыточные права, что нарушает принцип наименьших привилегий и создает риск компрометации всего репозитория в случае атаки на пайплайн.
 
+<img width="535" height="383" alt="Checkov 2" src="https://github.com/user-attachments/assets/627c1e15-cfa2-4712-a78a-f8d7e38061bd" />
+
 ### Gitleaks
 
 Результат работы: `✅ No leaks detected`.
 
 Секретов в репозитории не обнаружено. Файлы с конфиденциальными данными не попали в систему контроля версий.
 
+<img width="745" height="482" alt="Gitleaks 2" src="https://github.com/user-attachments/assets/606a729c-cf7c-4134-827a-13a6b2ed1221" />
+
 ### Hadolint
 
 По результатам анализа `Dockerfile` написан корректно, нет грубых нарушений безопасности.
+
+<img width="1146" height="382" alt="Hadolint 2" src="https://github.com/user-attachments/assets/2e3a9db4-4241-4319-8359-ed2c87fbf4db" />
 
 ### Trivy
 
@@ -61,6 +75,9 @@
 
 - В основном 102 уязвимости операционной системы `Debian 13.7`, которые в основном связаны с  устаревшими системными библиотеками `python3.12`.
 - Также 12 уязвимостей Python-пакетов.
+
+<img width="1088" height="599" alt="Trivy 4" src="https://github.com/user-attachments/assets/7066d5c1-1da6-46e0-b1c0-7cdde63ed7dd" />
+<img width="1081" height="967" alt="Trivy 3" src="https://github.com/user-attachments/assets/b603dab7-049f-473b-a9b9-aa6b65e3f114" />
 
 ## 3. Cлабые места
 
